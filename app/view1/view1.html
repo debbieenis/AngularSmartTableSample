@@ -1,37 +1,4 @@
 <p>This is the partial for view 1.</p>
-{{test}}
-<table class="table" st-pipe="callServer" st-table="displayed">
-    <thead>
-    <tr>
-        <th st-sort="id">id</th>
-        <th st-sort="name">name</th>
-        <th st-sort="age">age</th>
-        <th st-sort="saved">saved people</th>
-    </tr>
-    <tr>
-        <th><input st-search="id"/></th>
-        <th><input st-search="name"/></th>
-        <th><input st-search="age"/></th>
-        <th><input st-search="saved"/></th>
-    </tr>
-    </thead>
-    <tbody ng-show="!isLoading">
-    <tr ng-repeat="row in displayed">
-        <td>{{row.id}}</td>
-        <td>{{row.name}}</td>
-        <td>{{row.age}}</td>
-        <td>{{row.saved}}</td>
-    </tr>
-    </tbody>
-    <tbody ng-show="isLoading">
-    <tr>
-        <td colspan="4" class="text-center">Loading ... </td>
-    </tr>
-    </tbody>
-    <tfoot>
-    <tr>
-        <td class="text-center" st-pagination="" st-items-by-page="10" colspan="4">
-        </td>
-    </tr>
-    </tfoot>
-</table>
+<vf-data-grid vf-grid="grid">
+
+</vf-data-grid>
