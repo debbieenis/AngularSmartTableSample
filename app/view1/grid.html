@@ -1,50 +1,26 @@
-
-
 <div dir="rtl">
-    <table novalidate class="datagrid table table-hover" st-table="vm.rowCollection" st-safe-src="vm.rows"
+    <table novalidate class="datagrid table table-hover" st-table="vm.vfGrid.rowCollection" st-safe-src="vm.vfGrid.rows"
            st-select-row="row" st-select-mode="single">
         <thead>
         <tr>
-            <th st-ratio="5" st-sort="id">מזהה לקוח</th>
-            <th style="text-align:right;" st-ratio="10" st-sort="name">שם לקוח</th>
-            <th st-ratio="5" st-sort="creationDate">תאריך פתיחת תיק</th>
-            <th st-ratio="5" st-sort="active">לקוח פעיל</th>
-            <th st-ratio="5" st-sort="contactEmail">דוא"ל איש קשר</th>
-            <th st-ratio="5"></th>
-            <th st-ratio="5"></th>
+            <th ng-repeat="column in vm.vfGrid.getColumns()" st-ratio="5" st-sort="{{column.getKey()}}">{{column.getTitle()}}</th>
+            <th></th>
+            <th></th>
         </tr>
 
         <tr>
-            <th st-ratio="5">
-                <input st-search="id" placeholder="חיפוש לפי מזהה לקוח" class="input-sm form-control" type="search" />
+            <th ng-repeat="column in vm.vfGrid.getColumns()" st-ratio="5">
+                <input st-search="{{column.getKey()}}" placeholder="חיפוש לפי {{column.getTitle()}}" class="input-sm form-control" type="search" />
             </th>
-            <th st-ratio="5">
-                <input st-search="fullName" placeholder="חיפוש לפי שם לקוח" class="input-sm form-control" type="search" />
-            </th>
-            <th st-ratio="5"></th>
-            <th st-ratio="5">
-                <input st-search="active" placeholder="חיפוש לפי סטאטוס לקוח" class="input-sm form-control" type="search" />
-            </th>
-
-            <th st-ratio="5"></th> <th st-ratio="5"></th> <th st-ratio="5"></th>
+            <th></th>
+            <th></th>
 
         </tr>
         </thead>
 
-        <tbody ng-show="!vm.isLoading" >
-        <tr ng-repeat="row in vm.rowCollection">
-            <td st-ratio="5">{{row.id}}</td>
-            <td style="text-align:right;" st-ratio="10">{{row.fullName}}</td>
-            <td st-ratio="5">{{row.creationDate |  date: "dd/MM/yyyy" }}</td>
-            <!--<td st-ratio="20"><input type="checkbox" name = "test" ng-disabled="true" ng-model="row.active" /> </td>-->
-            <td st-ratio="5">
-                <i style="font-size:30px;color:cornflowerblue;" ng-class="row.active ? 'fa fa-check-circle-o' : 'fa fa-times-circle-o'"></i>
-            </td>
-            <!--<td st-ratio="40">    <mobilecheckbox ng-model="row.active" ></mobilecheckbox>    </td>-->
-            <td align="left" st-ratio="5">{{row.contactEmail}}</td>
-            <!--ng-click="$ctrl.open('lg',row.id)-->
-
-
+        <tbody ng-show="!vm.vfGrid.isLoading" >
+        <tr ng-repeat="row in vm.vfGrid.rowCollection">
+            <td st-ratio="5" ng-repeat="column in vm.vfGrid.getColumns()">{{row[column.getKey()]}}</td>
             <td st-ratio="5">
                 <button type="button" class="btn btn-default"  ng-click="vm.viewRecord('lg',row.id)">
                     <i class="glyphicon glyphicon-pencil">
@@ -64,7 +40,7 @@
 
         </tbody>
 
-        <tbody ng-show="vm.isLoading">
+        <tbody ng-show="vm.vfGrid.isLoading">
         <tr>
             <td colspan="4" class="text-center">Loading ... </td>
         </tr>
@@ -73,7 +49,7 @@
         <tfoot>
         <tr>
             <td colspan="7" class="text-right">
-                <div class="pull-right noPadding-vertical" st-pagination="" st-items-by-page="vm.itemsByPage"></div>
+                <div class="pull-right noPadding-vertical" st-pagination="" st-items-by-page="vm.vfGrid.itemsByPage"></div>
             </td>
         </tr>
 
@@ -83,9 +59,9 @@
     <div>
         <a class="pull-left">&nbsp;</a>
         <span class="btn btn-info btn-sm col-xs-2 pull-right"
-              ng-click="vm.viewRecord('lg',3)">הוספה</span>
+              ng-click="vm.vfGrid.viewRecord('lg',3)">הוספה</span>
 
-        <button type="button" class="btn btn-danger" ng-click="vm.deleteUser('lg',3)">
+        <button type="button" class="btn btn-danger" ng-click="vm.vfGrid.deleteUser('lg',3)">
             <i class="glyphicon glyphicon-trash">
             </i>
         </button>

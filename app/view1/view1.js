@@ -9,20 +9,30 @@ angular.module('myApp.view1', ['ngRoute','smart-table'])
   });
 }])
 
-.controller('View1Ctrl', ['Resource','$scope', function (Service,$scope) {
+.controller('View1Ctrl', ['Resource','$scope' ,'Grid' ,'Resource', 'Columns' ,'Column' ,'ColumnFormater' ,'ColumnFormaterComposite', function (Service,$scope,Grid,Resource,Columns,Column,ColumnFormater,ColumnFormaterComposite) {
 
     var ctrl = $scope;
-
+    ctrl.a ="a";
     ctrl.grid = new Grid({
-                            resource:new Resource({entityName:"users"}),
-                            columns:new Columns(
-                                [new Column({key:"Id",title:"id",type:"Number"})]
+                            resource:new Resource({entityName:"users.json"}),
+                            columns:new Columns({items:
+                                [
+                                    new Column({key:"id",title:"מזהה",formater: new ColumnFormater({key:"id"})}),
+                                    new Column({key:"fullName",title:"שם מלא",
+                                        formater:new ColumnFormaterComposite({separator:" ",formaters:
+                                            [
+                                                new ColumnFormater({key:"name"}),
+                                                new ColumnFormater({key:"engName"})
+                                            ]})})
+                                ]}
                             )});
 
 }])
 
 
     .factory('Resource', Resource)
+    .factory('ColumnFormater', ColumnFormater)
+    .factory('ColumnFormaterComposite', ColumnFormaterComposite)
     .factory('Column', Column)
     .factory('Columns', Columns)
     .factory('Grid', Grid)
@@ -33,15 +43,15 @@ function vfDataGrid($rootScope, $filter){
     var directive = {
         scope: {
             'vfGrid': '=',
-            value: '=ngModel'
+            //value: '=ngModel'
         },
-        require: 'ngModel',
+        //require: 'ngModel',
         restrict     : 'EA',
         controller   : controllerVfGrid,
         controllerAs : 'vm',
         link         : linkVfGrid,
         bindToController: true,
-        templateUrl : "/app/view1/grid.html"
+        templateUrl : "view1/grid.html"
 
     };
     return directive;
@@ -50,9 +60,7 @@ function vfDataGrid($rootScope, $filter){
 controllerVfGrid.$inject = ['$scope', '$rootScope'];
 
 function controllerVfGrid($scope, $rootScope ) {
-    debugger;
-
-
+debugger;
 
 }
 
@@ -78,43 +86,123 @@ function linkVfGrid($scope, element, attrs, ctrl) {
 
 }
 
-Column.$inject = ['$q', '$filter', '$http'];
+ColumnFormater.$inject = [];
 /* @ngInject */
-function Column($q, $filter, $http) {
+function ColumnFormater() {
 
-    //{key:"Id",title:"id",type:"Number"}
+    //{key:"Id"}
+    function ColumnFormaterFactory(columnFormaterDTO) {
+
+        var vm = this;
+
+        vm.format = format;
+        vm.setKey = setKey;
+
+        function setKey(key){
+            columnFormaterDTO.key = key;
+        }
+
+        function format(row){
+            return row[columnFormaterDTO.key];
+        }
+
+        return vm;
+    }
+    return ColumnFormaterFactory;
+};
+
+ColumnFormaterComposite.$inject = [];
+/* @ngInject */
+function ColumnFormaterComposite() {
+    //{formaters:[],separator:" "}
+    function ColumnFormaterCompositeFactory(columnFormaterCompositeDTO) {
+
+        var vm = this;
+
+        vm.format = format;
+
+        function format(row){
+            var formatedArray = columnFormaterCompositeDTO.formaters.map(function(formater){
+                return formater.format(row);
+            })
+            return formatedArray.join(columnFormaterCompositeDTO.separator);
+        }
+
+        return vm;
+    }
+    return ColumnFormaterCompositeFactory
+};
+
+
+Column.$inject = [];
+/* @ngInject */
+function Column() {
+
+    //{key:"Id",title:"id",formater:"Number"}
     function ColumnFactory(columnDTO) {
 
         var vm = this;
 
+        vm.format = format;
+        vm.getKey = getKey;
+        vm.getTitle = getTitle;
+
+        function getKey(){
+            return columnDTO.key;
+        }
+
+        function getTitle(){
+            return columnDTO.title;
+        }
+
+        function format(row){
+            return columnDTO.formater.format(row);
+        }
 
         return vm;
     }
+    return ColumnFactory;
 };
 
-Columns.$inject = ['$q', '$filter', '$http'];
+Columns.$inject = [];
 /* @ngInject */
-function Columns($q, $filter, $http) {
+function Columns() {
 
     //{items:[]}
     function ColumnsFactory(columnsDTO) {
 
         var vm = this;
+        vm.forEach = forEach;
+        vm.getAll = getAll;
+
+        function getAll(){
+            return columnsDTO.items;
+        }
+
+        function forEach(func){
+            columnsDTO.items.forEach(func);
+        }
 
 
         return vm;
     }
+    return ColumnsFactory;
 };
 
-Grid.$inject = ['$q', '$filter', '$http'];
+Grid.$inject = [];
 /* @ngInject */
-function Grid($q, $filter, $http) {
+function Grid() {
 
-    //{resource:new Resource({entityName:"users"}),columns:new Columns([new Column({key:"Id",title:"id",type:"Number"})]}
+    //{resource:new Resource({entityName:"users"}),columns:new Columns([new Column({key:"Id",title:"id",formater:new ColumnFormater({key:"Id"}})]}
     function GridFactory(gridDTO) {
 
         var vm = this;
 
+        vm.getColumns = getColumns;
+
+        function getColumns(){
+            return gridDTO.columns.getAll();
+        }
 
         vm.isLoading = true;
         vm.user = null;
@@ -128,6 +216,7 @@ function Grid($q, $filter, $http) {
 
         vm.viewRecord = viewRecord;
 
+        debugger;
 
         ///////////////////////////////////////////////////////////////////////
         initController();
@@ -141,13 +230,17 @@ function Grid($q, $filter, $http) {
         function loadAllUsers() {
             gridDTO.resource.GetAll()
                 .then(function (users) {
+                    debugger;
                     vm.allUsers = users;
                     vm.rows = users;
                     vm.rowCollection = [].concat(vm.rows);
 
                     if (users && users.length > 0) {
                         for (var i = 0; i < users.length; i++) {
-                            users[i].fullName = users[i].name + ' ' + users[i].engName;
+                            gridDTO.columns.forEach(function(column){
+                                users[i][column.getKey()] = column.format(users[i]);
+                            })
+                            //users[i].fullName = users[i].name + ' ' + users[i].engName;
                         }
                     }
                     vm.isLoading = false;
@@ -209,11 +302,12 @@ function Grid($q, $filter, $http) {
 
     return vm;
     }
+    return GridFactory;
 };
 
-Resource.$inject = ['$q', '$filter', '$http'];
+Resource.$inject = ['$http'];
 /* @ngInject */
-function Resource($q, $filter, $http) {
+function Resource($http) {
 
     function ResourceFactory(resourceDTO) {
 
