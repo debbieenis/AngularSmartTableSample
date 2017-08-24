@@ -1,0 +1,10 @@
+{
+  "users": [
+    { "id": 1, "name": "json-server", "engName": "typicode" },
+    { "id": 2, "name": "xml", "engName": "xsl" }
+  ],
+  "comments": [
+    { "id": 1, "body": "some comment", "postId": 1 }
+  ],
+  "profile": { "name": "typicode" }
+}

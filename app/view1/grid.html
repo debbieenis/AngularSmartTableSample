@@ -22,7 +22,7 @@
         <tr ng-repeat="row in vm.vfGrid.rowCollection">
             <td st-ratio="5" ng-repeat="column in vm.vfGrid.getColumns()">{{row[column.getKey()]}}</td>
             <td st-ratio="5">
-                <button type="button" class="btn btn-default"  ng-click="vm.viewRecord('lg',row.id)">
+                <button type="button" class="btn btn-default"  ng-click="vm.vfGrid.editRecord('lg',row.id)">
                     <i class="glyphicon glyphicon-pencil">
                     </i>
                 </button>
@@ -30,7 +30,7 @@
             </td>
 
             <td st-ratio="5">
-                <button type="button" class="btn btn-danger" ng-click="vm.deleteUser(row.id)">
+                <button type="button" class="btn btn-danger" ng-click="vm.vfGrid.deleteUser(row.id)">
                     <i class="glyphicon glyphicon-trash">
                     </i>
                 </button>
@@ -59,7 +59,7 @@
     <div>
         <a class="pull-left">&nbsp;</a>
         <span class="btn btn-info btn-sm col-xs-2 pull-right"
-              ng-click="vm.vfGrid.viewRecord('lg',3)">הוספה</span>
+              ng-click="vm.vfGrid.addRecord('lg')">הוספה</span>
 
         <button type="button" class="btn btn-danger" ng-click="vm.vfGrid.deleteUser('lg',3)">
             <i class="glyphicon glyphicon-trash">
@@ -80,87 +80,18 @@
         </div>
         <div class="modal-body">
             <form class="form-horizontal" role="form">
-
+                {{vm.getColumns() | json}}
                 <div class="form-group row">
-                    <label class="col-sm-1 pull-right  control-label">מזהה לקוח <sup class="sup-color"></sup></label>
-                    <div class="col-sm-2 pull-right">
-                        <input type="text" ng-model="vm.MunicipalityRecord.id" ng-disabled="true" class="form-control">
-                    </div>
-
-
-                    <label class="col-sm-1 pull-right  control-label">שם לקוח <sup class="sup-color">*</sup></label>
-                    <span class="help-button pull-right" uib-tooltip="נא הזן שם לקוח" tooltip-placement="right">?</span>
-                    <div class="col-sm-2 pull-right">
-                        <input type="text" ng-model="vm.MunicipalityRecord.name" placeholder="שם לקוח" class="form-control">
-                    </div>
-
-
-
-                    <label class="col-sm-1 pull-right control-label">שם לקוח באנגלית <sup class="sup-color">*</sup></label>
-                    <span class="help-button pull-right" uib-tooltip="נא הזן שם לקוח באנגלית" tooltip-placement="right">?</span>
-                    <div class="col-sm-2 pull-right">
-                        <input type="text" ng-model="vm.MunicipalityRecord.engName" placeholder="שם לקוח באנגלית" class="form-control">
+                    <div ng-repeat="column in vm.getColumns()" ng-init="key=column.getKey()">
+                        <label class="col-sm-1 pull-right  control-label">{{column.getTitle()}}<sup class="sup-color">*</sup></label>
+                        <div class="col-sm-2 pull-right">
+                           <!--{{vm.MunicipalityRecord.engName}}- {{vm.MunicipalityRecord | json}}-{{column.getKey() | json}}-->
+                            <input type="text" ng-model="vm.MunicipalityRecord[key]" ng-disabled="false" class="form-control">
+                            
+                        </div>
                     </div>
                 </div>
 
-
-
-                <div class="form-group row">
-                    <label class="col-sm-1 pull-right control-label">תאריך פתיחת תיק <sup class="sup-color"></sup></label>
-
-                    <div class="col-sm-2 pull-right">
-                        <input type="text" datetime="yyyy-MM-dd HH:mm:ss" ng-model="vm.MunicipalityRecord.creationDate" ng-disabled="true" placeholder="תאריך פתיחת תיק" class="form-control">
-                    </div>
-
-
-                    <label class="col-sm-1 pull-right control-label ">לקוח פעיל<sup class="sup-color"></sup></label>
-                    <span class="help-button pull-right" uib-tooltip="נא סמן לקוח פעיל" tooltip-placement="right">?</span>
-
-                    <div class="col-sm-3 pull-right">
-                        <mobilecheckbox ng-model="vm.MunicipalityRecord.active"></mobilecheckbox>
-                    </div>
-
-                </div>
-
-
-
-                <div class="form-group row">
-                    <label class="col-sm-1 pull-right control-label">פרטי איש קשר לקוח <sup class="sup-color">*</sup></label>
-                    <span class="help-button pull-right" uib-tooltip="נא הזן פרטי איש קשר לקוח" tooltip-placement="right">?</span>
-                    <div class="col-sm-2 pull-right">
-                        <input type="text" ng-model="vm.MunicipalityRecord.contactFullName" placeholder="פרטי איש קשר לקוח" class="form-control">
-                    </div>
-
-                    <label class="col-sm-1 pull-right control-label">מייל איש קשר <sup class="sup-color">*</sup></label>
-                    <span class="help-button pull-right" uib-tooltip="נא הזן מייל איש קשר" tooltip-placement="right">?</span>
-                    <div class="col-sm-2 pull-right">
-                        <input type="text" ng-model="vm.MunicipalityRecord.contactEmail" placeholder="מייל איש קשר" class="form-control">
-                    </div>
-
-
-                    <label class="col-sm-1 pull-right control-label">טלפון איש קשר <sup class="sup-color">*</sup></label>
-                    <span class="help-button pull-right" uib-tooltip="נא הזן טלפון איש קשר" tooltip-placement="right">?</span>
-                    <div class="col-sm-2 pull-right">
-                        <input type="text" ng-model="vm.MunicipalityRecord.contactPhone" placeholder="טלפון איש קשר" class="form-control">
-                    </div>
-                </div>
-
-                <div class="form-group row">
-                    <label class="col-sm-1 pull-right control-label">הערה כללית <sup class="sup-color"></sup></label>
-                    <span class="help-button pull-right" uib-tooltip="נא הזן הערה כללית" tooltip-placement="right">?</span>
-                    <div class="col-sm-8 pull-right">
-                            <textarea rows="5" ng-model="vm.MunicipalityRecord.generalRemarks" placeholder="הערה כללית"
-                                      class="form-control"></textarea>
-                    </div>
-                </div>
-
-                <div class="form-group row">
-                    <label class="col-sm-1 pull-right control-label">הוספת לוגו רחב:<sup class="sup-color"></sup></label>
-                </div>
-
-                <div class="form-group row">
-                    <label class="col-sm-1 pull-right control-label">הוספת לוגו מוקטן:<sup class="sup-color"></sup></label>
-                </div>
 
             </form>
         </div>

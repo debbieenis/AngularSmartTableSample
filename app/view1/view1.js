@@ -1,24 +1,89 @@
 'use strict';
 
-angular.module('myApp.view1', ['ngRoute','smart-table'])
-
+angular.module('myApp.view1', ['ngRoute','smart-table','ui.bootstrap','ngMockE2E'])
 .config(['$routeProvider', function($routeProvider) {
   $routeProvider.when('/view1', {
     templateUrl: 'view1/view1.html',
     controller: 'View1Ctrl'
   });
 }])
+    .run(['$httpBackend',function($httpBackend) {
+        var users = [{"id": 1,
+            "name": "aa",
+            "engName": "aa2",
+            "saved":"ff"},
+            {"id": 2,
+                "name": "dd",
+                "engName": "dd2",
+                "age": 3,
+                "saved":"ff"}
+        ];
 
-.controller('View1Ctrl', ['Resource','$scope' ,'Grid' ,'Resource', 'Columns' ,'Column' ,'ColumnFormater' ,'ColumnFormaterComposite', function (Service,$scope,Grid,Resource,Columns,Column,ColumnFormater,ColumnFormaterComposite) {
+        $httpBackend.whenGET(/^view1\//).passThrough();
+
+        // returns the current list of phones
+        $httpBackend.whenGET('/users').respond(users);
+
+        $httpBackend.whenPUT(/\/users\/(\d+)/, undefined, undefined, ['id']).respond(function(method, url, data, headers, params) {
+
+            var parsedData=null;
+            users.forEach(function (row) {
+                if (params.id==row.id){
+                    parsedData = angular.fromJson(data);
+                    angular.extend(row, parsedData);
+                    return;
+                };
+            });
+
+            if (parsedData == null) {
+                return [404, undefined, {}];
+            }
+
+            return [200, parsedData, {}];
+        });
+
+        // adds a new phone to the phones array
+        $httpBackend.whenPOST('/users').respond(function(method, url, data) {
+            var user = angular.fromJson(data);
+            user.id = users[users.length-1].id+1;
+            users.push(user);
+            return [200, user, {}];
+        });
+
+        $httpBackend.whenDELETE(/\/users\/(\d+)/, undefined, ['id']).respond(function(method, url, data, headers, params) {
+            var user=null;
+
+            users.forEach(function (row) {
+                if (params.id==row.id){
+                    user = row;
+                    return;
+                };
+            });
+
+            if (user == null) {
+                return [404, undefined, {}];
+            }
+
+            // Replace contacts array with filtered results, removing deleted contact.
+            users.splice(users.indexOf(user), 1);
+
+            return [200, undefined, {}];
+        });
+    }])
+
+.controller('View1Ctrl', ['Resource','$scope' ,'Grid' ,'Resource', 'Columns' ,'Column' ,'ColumnFormater' ,'ColumnFormaterComposite', '$uibModal', function (Service,$scope,Grid,Resource,Columns,Column,ColumnFormater,ColumnFormaterComposite,$uibModal) {
 
     var ctrl = $scope;
-    ctrl.a ="a";
+
+
     ctrl.grid = new Grid({
-                            resource:new Resource({entityName:"users.json"}),
+                            resource:new Resource({entityName:"users"}),
                             columns:new Columns({items:
                                 [
-                                    new Column({key:"id",title:"מזהה",formater: new ColumnFormater({key:"id"})}),
-                                    new Column({key:"fullName",title:"שם מלא",
+                                    new Column({key:"id",title:"מזהה",formater: new ColumnFormater({key:"id"}),editable:true,viewable:true}),
+                                    new Column({key:"name",title:"שם",formater: new ColumnFormater({key:"name"}),editable:true,viewable:false}),
+                                    new Column({key:"engName",title:"שם אנגלית",formater: new ColumnFormater({key:"engName"}),editable:true,viewable:false}),
+                                    new Column({key:"fullName",title:"שם מלא",editable:false,viewable:true,
                                         formater:new ColumnFormaterComposite({separator:" ",formaters:
                                             [
                                                 new ColumnFormater({key:"name"}),
@@ -36,7 +101,30 @@ angular.module('myApp.view1', ['ngRoute','smart-table'])
     .factory('Column', Column)
     .factory('Columns', Columns)
     .factory('Grid', Grid)
-    .directive('vfDataGrid', vfDataGrid);
+    .directive('vfDataGrid', vfDataGrid)
+    .controller('ModalInstanceCtrl', ModalInstanceCtrl);
+
+function ModalInstanceCtrl($uibModalInstance, MunicipalityRecord, Columns, Resource) {
+    var $ctrl = this;
+    $ctrl.MunicipalityRecord = MunicipalityRecord;
+    $ctrl.getColumns = getColumns;
+
+    function getColumns(){
+        return Columns;
+    }
+    $ctrl.ok = function () {
+        var func = ($ctrl.MunicipalityRecord.id)?Resource.Update:Resource.Add;
+        func($ctrl.MunicipalityRecord).then(
+            function (response){
+                $uibModalInstance.close(response);
+            }
+        )
+    };
+
+    $ctrl.cancel = function () {
+        $uibModalInstance.dismiss('cancel');
+    };
+};
 
 vfDataGrid.$inject = ['$rootScope', '$filter'];
 function vfDataGrid($rootScope, $filter){
@@ -60,7 +148,7 @@ function vfDataGrid($rootScope, $filter){
 controllerVfGrid.$inject = ['$scope', '$rootScope'];
 
 function controllerVfGrid($scope, $rootScope ) {
-debugger;
+
 
 }
 
@@ -138,7 +226,7 @@ Column.$inject = [];
 /* @ngInject */
 function Column() {
 
-    //{key:"Id",title:"id",formater:"Number"}
+    //{key:"Id",title:"id",formater:"Number",viewable:true,editable:true}
     function ColumnFactory(columnDTO) {
 
         var vm = this;
@@ -146,6 +234,16 @@ function Column() {
         vm.format = format;
         vm.getKey = getKey;
         vm.getTitle = getTitle;
+        vm.isViewable = isViewable;
+        vm.isEditable = isEditable;
+
+        function isEditable(){
+            return columnDTO.editable;
+        }
+
+        function isViewable(){
+            return columnDTO.viewable;
+        }
 
         function getKey(){
             return columnDTO.key;
@@ -172,14 +270,44 @@ function Columns() {
     function ColumnsFactory(columnsDTO) {
 
         var vm = this;
-        vm.forEach = forEach;
+        vm._forEach = _forEach;
         vm.getAll = getAll;
+        vm.getViewable = getViewable;
+        vm.getEditable = getEditable;
+        vm.formatRows = formatRows;
+        vm.formatRow = formatRow;
 
         function getAll(){
             return columnsDTO.items;
         }
 
-        function forEach(func){
+        function getEditable(){
+            return columnsDTO.items.filter(function(column){
+                return column.isEditable()
+            });
+        }
+
+        function getViewable(){
+            return columnsDTO.items.filter(function(column){
+                return column.isViewable()
+            });
+        }
+
+        function formatRow(row){
+            var formatedRow = {};
+            vm.getViewable().forEach(function(column){
+                formatedRow[column.getKey()] = column.format(row);
+            });
+            return formatedRow;
+        }
+
+        function formatRows(rows){
+            return rows.map(function(row){
+                var formatedRow = vm.formatRow(row);
+                return formatedRow;
+            })
+        }
+        function _forEach(func){
             columnsDTO.items.forEach(func);
         }
 
@@ -189,9 +317,9 @@ function Columns() {
     return ColumnsFactory;
 };
 
-Grid.$inject = [];
+Grid.$inject = ['$uibModal'];
 /* @ngInject */
-function Grid() {
+function Grid($uibModal) {
 
     //{resource:new Resource({entityName:"users"}),columns:new Columns([new Column({key:"Id",title:"id",formater:new ColumnFormater({key:"Id"}})]}
     function GridFactory(gridDTO) {
@@ -199,9 +327,14 @@ function Grid() {
         var vm = this;
 
         vm.getColumns = getColumns;
+        vm.getEditableColumns =getEditableColumns;
+
+        function getEditableColumns(){
+            return gridDTO.columns.getEditable();
+        }
 
         function getColumns(){
-            return gridDTO.columns.getAll();
+            return gridDTO.columns.getViewable();
         }
 
         vm.isLoading = true;
@@ -213,10 +346,11 @@ function Grid() {
         vm.rowCsollection = [];
         vm.itemsByPage = "8";
         vm.deleteUser = deleteUser;
+        vm.editRecord = editRecord;
+        vm.addRecord = addRecord;
 
-        vm.viewRecord = viewRecord;
+        vm._viewRecord = _viewRecord;
 
-        debugger;
 
         ///////////////////////////////////////////////////////////////////////
         initController();
@@ -230,21 +364,14 @@ function Grid() {
         function loadAllUsers() {
             gridDTO.resource.GetAll()
                 .then(function (users) {
-                    debugger;
                     vm.allUsers = users;
                     vm.rows = users;
                     vm.rowCollection = [].concat(vm.rows);
 
                     if (users && users.length > 0) {
-                        for (var i = 0; i < users.length; i++) {
-                            gridDTO.columns.forEach(function(column){
-                                users[i][column.getKey()] = column.format(users[i]);
-                            })
-                            //users[i].fullName = users[i].name + ' ' + users[i].engName;
-                        }
+                        vm.rows = gridDTO.columns.formatRows(users);
                     }
                     vm.isLoading = false;
-                    vm.rows = users;
                     vm.rowCollection = [].concat(vm.rows);
 
                 });
@@ -254,19 +381,40 @@ function Grid() {
             if (confirm('Are you sure you want to delete this?')) {
                 gridDTO.resource.Delete(id)
                     .then(function () {
-                        loadAllUsers();
+                        for (var i = 0; i < vm.allUsers.length; i++) {
+                            var row = vm.allUsers[i];
+                            if (row.id == id){
+                                vm.allUsers.splice(i, 1);
+                                vm.rows.splice(i, 1);
+                                break;
+                            };
+                        }
                     });
             }
         }
 
+        function editRecord(size,id){
+            var user = {};
+            for (var i = 0; i < vm.allUsers.length; i++) {
+                var row = vm.allUsers[i];
+                if (row.id == id){
+                    user = row;
+                    break;
+                };
+            }
+            return vm._viewRecord(size,user)
+        }
 
+        function addRecord(size){
+            return vm._viewRecord(size,{})
+        }
 
-        function viewRecord(size, id) {
+        function _viewRecord(size, user) {
 
-            if (id > 0) {
-                gridDTO.resource.GetById(id)
-                    .then(function (response) {
-                        vm.user =response;
+            //if (id > 0) {
+                //gridDTO.resource.GetById(id)
+                  //  .then(function (response) {
+                        //vm.user =response;
 
                         vm.animationsEnabled = true;
                         var modalInstance = $uibModal.open({
@@ -281,23 +429,43 @@ function Grid() {
                             size: size,
                             resolve: {
                                 MunicipalityRecord: function () {
-                                    return vm.user;
+                                    return user;
                                 },
-                                UserService: UserService,
+                                Columns: function () {
+                                    return vm.getEditableColumns()
+                                },
+                                Resource : gridDTO.resource
                             }
                         });
 
                         modalInstance.result.then(function (selectedItem) {
+                            var found = false;
+                            var newRecord = gridDTO.columns.formatRow(selectedItem);
+                            for (var i = 0; i < vm.rows.length; i++) {
+                                var row = vm.rows[i];
+                                if (row.id == user.id){
+                                    angular.extend(row, newRecord);
+                                    vm.allUsers[i] = selectedItem;
+                                    found=true;
+                                    break;
+                                };
+                            }
+                            if (!found){
+                                vm.rows.push(newRecord);
+                                vm.allUsers.push(selectedItem);
+
+                            }
+
                             //vm.selected = selectedItem;
 
                         }, function () {
-                            $log.info('Modal dismissed at: ' +new Date());
+                            //$log.info('Modal dismissed at: ' +new Date());
                         });
 
 
 
-                    });
-            }
+                    //});
+            //}
         }
 
     return vm;
@@ -312,8 +480,13 @@ function Resource($http) {
     function ResourceFactory(resourceDTO) {
 
         var vm = this;
-        vm.promise = $http({ method: 'GET', url: resourceDTO.entityName, params: {} });
+        vm.url = "/";
+        vm.promise = $http({ method: 'GET', url: vm.url + resourceDTO.entityName, params: {} });
         vm.GetAll = GetAll;
+        vm.GetById = GetById;
+        vm.Update = Update;
+        vm.Add = Add;
+        vm.Delete = Delete;
         vm._handleSuccess = _handleSuccess;
         vm._handleError =  _handleError;
 
@@ -326,6 +499,25 @@ function Resource($http) {
             return function () {
                 return { success: false, message: error };
             };
+        }
+
+        function GetById(id){
+
+        }
+
+        function Delete(id){
+            return $http.delete(vm.url + resourceDTO.entityName+"/"+id)
+                .then(vm._handleSuccess, vm._handleError('Error deleting user'));
+        }
+
+        function Add(item){
+            return $http.post(vm.url + resourceDTO.entityName, item)
+                .then(vm._handleSuccess, vm._handleError('Error adding user'));
+        }
+
+        function Update(item){
+            return $http.put(vm.url + resourceDTO.entityName+"/"+item.id, item)
+                .then(vm._handleSuccess, vm._handleError('Error updating user'));
         }
 
         function GetAll(){
